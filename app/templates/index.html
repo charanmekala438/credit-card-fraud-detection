@@ -1,47 +1,131 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-    <title>Credit Card Fraud Detection</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Fraud Detection System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
 
-<div class="container">
+<div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo-icon">💳</div>
+        <div class="header-text">
+            <h1>Credit Card Fraud Detection System</h1>
+            <p>Real-time Machine Learning Transaction Classification</p>
+        </div>
+        <span class="badge">Scikit-Learn ML</span>
+    </header>
 
-    <h1>Credit Card Fraud Detection System</h1>
+    <!-- Result Banner (If available) -->
+    {% if result %}
+    <div class="result-card {% if result.is_fraud %}fraud-card{% else %}legit-card{% endif %}">
+        <div class="result-header">
+            <div class="status-icon">{% if result.is_fraud %}🚨{% else %}✅{% endif %}</div>
+            <div class="status-info">
+                <h2>{{ result.result_title }}</h2>
+                <span class="risk-badge {{ result.risk_level | lower | replace(' ', '-') }}">{{ result.risk_level }}</span>
+            </div>
+        </div>
+        <div class="probability-section">
+            <div class="prob-labels">
+                <span>Fraud Probability</span>
+                <strong>{{ result.fraud_probability }}%</strong>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill {% if result.is_fraud %}fill-fraud{% else %}fill-legit{% endif %}" style="width: {{ result.fraud_probability }}%;"></div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-    <form action="/predict" method="POST">
+    <!-- Preset Toolbar -->
+    <div class="preset-toolbar">
+        <span class="preset-label">Quick Test Presets:</span>
+        <button type="button" class="btn btn-preset btn-legit" onclick="loadSample('legitimate')">
+            ✅ Load Legitimate Sample
+        </button>
+        <button type="button" class="btn btn-preset btn-fraud" onclick="loadSample('fraudulent')">
+            🚨 Load Fraudulent Sample
+        </button>
+        <button type="button" class="btn btn-preset btn-clear" onclick="clearForm()">
+            🔄 Reset
+        </button>
+    </div>
 
-        <div class="grid">
-
-            {% for i in range(1,31) %}
-
-            <input
-                type="number"
-                step="any"
-                name="feature{{i}}"
-                placeholder="Feature {{i}}"
-                required>
-
-            {% endfor %}
-
+    <!-- Main Prediction Form -->
+    <form action="/predict" method="POST" id="fraudForm">
+        <!-- Transaction Basics -->
+        <div class="card-section">
+            <h3 class="section-title">📊 Primary Transaction Metadata</h3>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label for="input-Time">Time (Seconds elapsed)</label>
+                    <input type="number" step="any" id="input-Time" name="Time" value="{{ form_data.get('Time', 0.0) }}" required>
+                </div>
+                <div class="input-group">
+                    <label for="input-Amount">Amount ($ USD)</label>
+                    <input type="number" step="any" id="input-Amount" name="Amount" value="{{ form_data.get('Amount', 0.0) }}" required>
+                </div>
+            </div>
         </div>
 
-        <button type="submit">
-            Predict
-        </button>
+        <!-- PCA Features V1 - V28 -->
+        <div class="card-section">
+            <h3 class="section-title">🔒 PCA Feature Vectors (V1 – V28)</h3>
+            <div class="grid-pca">
+                {% for feature in feature_names %}
+                    {% if feature not in ['Time', 'Amount'] %}
+                    <div class="input-group-sm">
+                        <label for="input-{{ feature }}">{{ feature }}</label>
+                        <input type="number" step="any" id="input-{{ feature }}" name="{{ feature }}" value="{{ form_data.get(feature, 0.0) }}" required>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
 
+        <!-- Submit Button -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-submit">
+                🔍 Classify Transaction
+            </button>
+        </div>
     </form>
-
-    <h2>{{ prediction_text }}</h2>
-
 </div>
 
+<script>
+async function loadSample(sampleType) {
+    try {
+        const response = await fetch(`/api/sample/${sampleType}`);
+        const result = await response.json();
+        if (result.status === 'success') {
+            const data = result.data;
+            for (const key in data) {
+                const el = document.getElementById(`input-${key}`);
+                if (el) {
+                    el.value = data[key];
+                    el.classList.add('highlight-flash');
+                    setTimeout(() => el.classList.remove('highlight-flash'), 800);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Failed to load sample data:", err);
+    }
+}
+
+function clearForm() {
+    const inputs = document.querySelectorAll('#fraudForm input[type="number"]');
+    inputs.forEach(input => input.value = 0.0);
+}
+</script>
+
 </body>
-</html>
+</html>
