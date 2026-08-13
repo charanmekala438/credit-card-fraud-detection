@@ -3,4 +3,4 @@ services:
     name: credit-card-fraud-detection
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --chdir app app:app
+    startCommand: gunicorn wsgi:app
